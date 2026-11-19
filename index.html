@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Contador de visitas</title>
+<link rel="preconnect" href="https://abacus.jasoncameron.dev" crossorigin>
+<link rel="preconnect" href="https://api.counterapi.dev" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;800&display=swap" rel="stylesheet">
@@ -25,9 +27,13 @@ body{background:#fff;font-family:var(--sans);color:var(--ink);padding:12px}
 .rl{display:block;will-change:transform}
 .rl span{display:block;height:1.2em;line-height:1.2em;text-align:center;color:var(--sky)}
 .dg.z .rl span{color:var(--navy3)}
+.rl.carga{animation:giro var(--gd,.9s) linear infinite}
+.odo.espera .dg{opacity:.8}
+@keyframes giro{to{transform:translateY(-12em)}}
 .msg{position:relative;z-index:1;margin:0;font-size:clamp(1rem,3vw,1.35rem);font-weight:600;color:#dbe9f5;min-height:1.6em}
 .msg b{color:#fff;font-weight:800}
 .sub{position:relative;z-index:1;margin:0;font-size:.82rem;color:var(--blue);opacity:.85}
+.thanks{opacity:0;transition:opacity .5s}.thanks.on{opacity:1}
 .thanks{position:relative;z-index:1;display:flex;align-items:center;gap:.6rem;margin:0;font-weight:700;font-size:clamp(.95rem,2.8vw,1.15rem);color:var(--sky)}
 .heart{width:1.9em;height:1.9em;flex:none;opacity:0;transform:scale(.2);filter:drop-shadow(0 4px 10px rgba(238,91,102,.55))}
 .heart.on{animation:pop .8s cubic-bezier(.3,1.6,.5,1) forwards,latir 1.5s ease-in-out .9s infinite}
@@ -38,7 +44,7 @@ body{background:#fff;font-family:var(--sans);color:var(--ink);padding:12px}
 @keyframes vuela{0%{opacity:0;transform:translate(0,0) scale(.5)}15%{opacity:.95}100%{opacity:0;transform:translate(var(--dx),-190px) scale(1.1)}}
 @media(prefers-reduced-motion:reduce){.heart,.heart.on{animation:none;opacity:1;transform:none}}
 .err .odo{opacity:.5}.err .thanks{display:none}
-@media(prefers-reduced-motion:reduce){.rl{transition:none!important}}
+@media(prefers-reduced-motion:reduce){.rl{transition:none!important}.rl.carga{animation:none}}
 </style>
 </head>
 <body>
@@ -72,7 +78,7 @@ body{background:#fff;font-family:var(--sans);color:var(--ink);padding:12px}
   ];
   var DEBUG=new URLSearchParams(location.search).get('debug')==='1',log=[];
   function getJSON(url){
-    var c=window.AbortController?new AbortController():null,t=setTimeout(function(){c&&c.abort()},7000);
+    var c=window.AbortController?new AbortController():null,t=setTimeout(function(){c&&c.abort()},5000);
     return fetch(url,{cache:'no-store',signal:c?c.signal:undefined}).then(function(r){clearTimeout(t);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()});
   }
   function obtener(contar){
@@ -112,6 +118,7 @@ body{background:#fff;font-family:var(--sans);color:var(--ink);padding:12px}
     r.style.transform='translateY(-'+(k*H)+'em)';
   }
   function mostrar(prev,val){
+    odo.classList.remove('espera');
     var len=Math.max(String(val).length,String(prev).length,MIN_DIGITOS);
     var cols=build(len),a=pad(prev,len),b=pad(val,len),first=-1,i;
     for(i=0;i<len;i++){if(a[i]!==b[i]){first=i;break}}
@@ -135,7 +142,7 @@ body{background:#fff;font-family:var(--sans);color:var(--ink);padding:12px}
   var heart=document.getElementById('heart');
   function gracias(){
     if(!heart||card.classList.contains('err'))return;
-    heart.classList.add('on');
+    heart.classList.add('on');document.getElementById('thanks').classList.add('on');
     if(reduce)return;
     var hr=card.getBoundingClientRect();
     for(var i=0;i<9;i++){
@@ -162,12 +169,25 @@ body{background:#fff;font-family:var(--sans);color:var(--ink);padding:12px}
 
   var contado=ss('contado')==='1';
   var prev=Number(st('ultimo'))||0;
+  function cargando(){
+    var cols=build(MIN_DIGITOS);
+    odo.classList.add('espera');
+    cols.forEach(function(c,i){
+      c.d.className='dg';
+      if(reduce){c.r.style.transform='translateY(0)';return}
+      c.r.classList.add('carga');c.r.style.setProperty('--gd',(0.75+i*0.17)+'s');
+    });
+    odo.setAttribute('aria-label','Visitas: contando');
+  }
+  if(prev){mostrar(prev,prev)}else{cargando()}
+  msg.textContent='Contando tu visita…';
   obtener(!contado).then(function(v){
     if(!contado)ss('contado','1');
     st('ultimo',String(v));
     fin(prev,v,!contado);depurar();
   }).catch(function(){
     card.classList.add('err');
+    odo.classList.remove('espera');
     mostrar(prev,prev);
     msg.textContent=prev?'No hemos podido actualizar el contador ahora mismo.':'El contador no está disponible ahora mismo.';
     depurar();
