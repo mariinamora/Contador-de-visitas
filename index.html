@@ -66,21 +66,33 @@ body{background:#fff;font-family:var(--sans);color:var(--ink);padding:12px}
   function ss(k,v){try{if(v===undefined)return window.sessionStorage.getItem(k);window.sessionStorage.setItem(k,v)}catch(e){return null}}
 
   var providers=[
-    {hit:'https://abacus.jasoncameron.dev/hit/'+NS+'/'+KEY, get:'https://abacus.jasoncameron.dev/get/'+NS+'/'+KEY, val:function(j){return j.value}},
-    {hit:'https://api.counterapi.dev/v1/'+NS+'/'+KEY+'/up', get:'https://api.counterapi.dev/v1/'+NS+'/'+KEY, val:function(j){return j.count}}
+    {n:'abacus', hit:'https://abacus.jasoncameron.dev/hit/'+NS+'/'+KEY, get:'https://abacus.jasoncameron.dev/get/'+NS+'/'+KEY, val:function(j){return j.value}},
+    {n:'counterapi', hit:'https://api.counterapi.dev/v1/'+NS+'/'+KEY+'/up', get:'https://api.counterapi.dev/v1/'+NS+'/'+KEY, val:function(j){return j.count}},
+    {n:'countapi-mh', hit:'https://countapi.mileshilliard.com/api/v1/hit/'+NS+'-'+KEY, get:'https://countapi.mileshilliard.com/api/v1/get/'+NS+'-'+KEY, val:function(j){return j.value}}
   ];
+  var DEBUG=new URLSearchParams(location.search).get('debug')==='1',log=[];
   function getJSON(url){
     var c=window.AbortController?new AbortController():null,t=setTimeout(function(){c&&c.abort()},7000);
-    return fetch(url,{cache:'no-store',signal:c?c.signal:undefined}).then(function(r){clearTimeout(t);if(!r.ok)throw new Error('http');return r.json()});
+    return fetch(url,{cache:'no-store',signal:c?c.signal:undefined}).then(function(r){clearTimeout(t);if(!r.ok)throw new Error('HTTP '+r.status);return r.json()});
   }
   function obtener(contar){
     var i=0;
     function next(){
       if(i>=providers.length)return Promise.reject(new Error('sin servicio'));
       var p=providers[i++];
-      return getJSON(contar?p.hit:p.get).then(function(j){var v=Number(p.val(j));if(!isFinite(v))throw new Error('nan');return v}).catch(next);
+      return getJSON(contar?p.hit:p.get).then(function(j){
+        var v=Number(p.val(j));if(!isFinite(v))throw new Error('respuesta rara: '+JSON.stringify(j).slice(0,80));
+        log.push(p.n+': OK ('+v+')');return v;
+      }).catch(function(e){log.push(p.n+': '+(e&&e.message||e));return next()});
     }
     return next();
+  }
+  function depurar(){
+    if(!DEBUG)return;
+    var pre=document.createElement('pre');
+    pre.style.cssText='position:relative;z-index:1;margin:0;font:12px/1.4 monospace;color:#93c0e3;white-space:pre-wrap';
+    pre.textContent='DIAGNÓSTICO\n'+log.join('\n');
+    card.appendChild(pre);
   }
 
   function pad(n,len){var s=String(Math.max(0,Math.floor(n)));while(s.length<len)s='0'+s;return s}
@@ -153,11 +165,12 @@ body{background:#fff;font-family:var(--sans);color:var(--ink);padding:12px}
   obtener(!contado).then(function(v){
     if(!contado)ss('contado','1');
     st('ultimo',String(v));
-    fin(prev,v,!contado);
+    fin(prev,v,!contado);depurar();
   }).catch(function(){
     card.classList.add('err');
     mostrar(prev,prev);
     msg.textContent=prev?'No hemos podido actualizar el contador ahora mismo.':'El contador no está disponible ahora mismo.';
+    depurar();
   });
 })();
 </script>
