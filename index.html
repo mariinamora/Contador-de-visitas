@@ -27,9 +27,8 @@ body{background:#fff;font-family:var(--sans);color:var(--ink);padding:12px}
 .rl{display:block;will-change:transform}
 .rl span{display:block;height:1.2em;line-height:1.2em;text-align:center;color:var(--sky)}
 .dg.z .rl span{color:var(--navy3)}
-.rl.carga{animation:giro var(--gd,.9s) linear infinite}
-.odo.espera .dg{opacity:.8}
-@keyframes giro{to{transform:translateY(-12em)}}
+.odo.espera{animation:respira 1.6s ease-in-out infinite}
+@keyframes respira{0%,100%{opacity:.45}50%{opacity:.85}}
 .msg{position:relative;z-index:1;margin:0;font-size:clamp(1rem,3vw,1.35rem);font-weight:600;color:#dbe9f5;min-height:1.6em}
 .msg b{color:#fff;font-weight:800}
 .sub{position:relative;z-index:1;margin:0;font-size:.82rem;color:var(--blue);opacity:.85}
@@ -44,7 +43,7 @@ body{background:#fff;font-family:var(--sans);color:var(--ink);padding:12px}
 @keyframes vuela{0%{opacity:0;transform:translate(0,0) scale(.5)}15%{opacity:.95}100%{opacity:0;transform:translate(var(--dx),-190px) scale(1.1)}}
 @media(prefers-reduced-motion:reduce){.heart,.heart.on{animation:none;opacity:1;transform:none}}
 .err .odo{opacity:.5}.err .thanks{display:none}
-@media(prefers-reduced-motion:reduce){.rl{transition:none!important}.rl.carga{animation:none}}
+@media(prefers-reduced-motion:reduce){.rl{transition:none!important}.odo.espera{animation:none;opacity:.6}}
 </style>
 </head>
 <body>
@@ -172,11 +171,7 @@ body{background:#fff;font-family:var(--sans);color:var(--ink);padding:12px}
   function cargando(){
     var cols=build(MIN_DIGITOS);
     odo.classList.add('espera');
-    cols.forEach(function(c,i){
-      c.d.className='dg';
-      if(reduce){c.r.style.transform='translateY(0)';return}
-      c.r.classList.add('carga');c.r.style.setProperty('--gd',(0.75+i*0.17)+'s');
-    });
+    cols.forEach(function(c){c.d.className='dg z';pos(c.r,0,false)});
     odo.setAttribute('aria-label','Visitas: contando');
   }
   if(prev){mostrar(prev,prev)}else{cargando()}
